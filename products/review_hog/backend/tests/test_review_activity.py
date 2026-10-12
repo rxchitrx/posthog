@@ -17,6 +17,8 @@ from products.review_hog.backend.reviewer.constants import (
     CHUNKING_RUNTIME_ADAPTER,
     DEFAULT_REVIEW_ARM,
     FLASH_ARM,
+    FLASH_LENS_MAX_CHUNKS,
+    FLASH_LENSES,
     REVIEW_MODE_FLASH,
     ReviewArm,
     review_arm_for_mode,
@@ -647,6 +649,8 @@ async def test_coordinator_persists_each_sub_agent_under_its_session_key(
             assert result.lens_failures == 1
 
     assert [file.name for file in mock_review.call_args.kwargs["files"]] == [f"{task}.prompt.md" for task in tasks]
+    # Codex rejects spawns past its thread limit, so the limit must fit the coordinator and the largest PR.
+    assert mock_review.call_args.kwargs["codex_max_threads"] >= 2 + len(FLASH_LENSES) * FLASH_LENS_MAX_CHUNKS
     persisted = mock_persist.call_args.kwargs["results"]
     assert {key: review.issues[0].source_perspective for key, review in persisted.items()} == {
         key: source
