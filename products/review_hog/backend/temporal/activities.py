@@ -582,6 +582,7 @@ class RecordTurnMarkerInput:
     review_mode: str
     flash_reasoning_effort: str
     review_design: str = REVIEW_DESIGN_PIPELINE
+    coordinator: bool = False
 
 
 @frozen
@@ -1048,6 +1049,7 @@ def _record_turn_marker_safe(input: RecordTurnMarkerInput) -> ReviewHogMarker | 
             review_mode=input.review_mode,
             flash_reasoning_effort=input.flash_reasoning_effort,
             review_design=input.review_design,
+            coordinator=input.coordinator,
         )
     except Exception:
         logger.exception("Failed to record the turn marker for report %s; continuing", input.report_id)
