@@ -142,5 +142,5 @@ class TerraformLock:
     writes until that first write."""
 
     managed: bool
-    managed_at: datetime | None
+    terraform_last_applied_at: datetime | None
     has_terraform_account: bool

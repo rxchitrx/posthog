@@ -3148,13 +3148,15 @@ class TestAccessControlTerraformLockAPI(BaseAccessControlTest):
         return self._write_rule({"authorization": f"Bearer {key}", "user-agent": TERRAFORM_USER_AGENT}, resource)
 
     def _managed_by_user(self) -> User | None:
-        config = TeamAccessControlConfig.objects.filter(team=self.team).select_related("managed_by__user").first()
-        return config.managed_by.user if config and config.managed_by else None
+        config = (
+            TeamAccessControlConfig.objects.filter(team=self.team).select_related("terraform_managed_by__user").first()
+        )
+        return config.terraform_managed_by.user if config and config.terraform_managed_by else None
 
     def test_a_terraform_write_marks_the_project_with_the_key_owner(self):
         assert self.client.get(self.url).json() == {
             "managed": False,
-            "managed_at": None,
+            "terraform_last_applied_at": None,
             "has_terraform_account": False,
         }
 
@@ -3164,7 +3166,7 @@ class TestAccessControlTerraformLockAPI(BaseAccessControlTest):
 
         self.client.force_login(self.user)
         body = self.client.get(self.url).json()
-        assert body["managed"] is True and body["managed_at"] is not None
+        assert body["managed"] is True and body["terraform_last_applied_at"] is not None
         assert self._put_global_access_control({"resource": "dashboard"}).status_code == status.HTTP_403_FORBIDDEN
 
     def test_an_api_key_without_the_terraform_user_agent_does_not_mark_it(self):
@@ -3194,7 +3196,8 @@ class TestAccessControlTerraformLockAPI(BaseAccessControlTest):
         self.client.force_login(self.user)
 
         response = self.client.put(self.url, {"managed": False}, format="json")
-        assert response.json() == {"managed": False, "managed_at": None, "has_terraform_account": True}
+        assert response.json()["managed"] is False
+        assert response.json()["terraform_last_applied_at"] is not None
         assert self._put_global_access_control({"resource": "dashboard"}).status_code == status.HTTP_200_OK
         assert self._managed_by_user() == self.terraform_user
 

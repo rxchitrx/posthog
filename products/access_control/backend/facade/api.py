@@ -240,11 +240,10 @@ def can_delete_role(*, role_id: UUID, user_id: int) -> bool:
 
 def get_terraform_lock(*, team_id: int) -> contracts.TerraformLock:
     config = TeamAccessControlConfig.objects.filter(team_id=team_id).first()
-    managed = config is not None and config.is_managed_by_terraform
     return contracts.TerraformLock(
-        managed=managed,
-        managed_at=config.managed_at if config and managed else None,
-        has_terraform_account=config is not None and config.managed_by_id is not None,
+        managed=config is not None and config.is_managed_by_terraform,
+        terraform_last_applied_at=config.terraform_last_applied_at if config else None,
+        has_terraform_account=config is not None and config.terraform_managed_by_id is not None,
     )
 
 
@@ -252,8 +251,8 @@ def set_terraform_lock(*, team_id: int, enabled: bool, terraform_user_id: int | 
     """Enable or disable the lock.
 
     With terraform_user_id, a Terraform write made the call. The owner of that API key becomes the
-    Terraform account of the project. A different account replaces the stored one, so a rotated
-    service account continues to work.
+    Terraform account of the project, and the write time is recorded. A different account replaces
+    the stored one, so a rotated service account continues to work.
 
     Without terraform_user_id, an admin made the call. Disable keeps the account. Enable before the
     first Terraform write locks everyone out until that write."""
@@ -264,11 +263,10 @@ def set_terraform_lock(*, team_id: int, enabled: bool, terraform_user_id: int | 
             organization_id=team.organization_id, user_id=terraform_user_id
         ).first()
         if membership is not None:
-            config.managed_by = membership
-    if enabled and not config.is_managed_by_terraform:
-        config.managed_at = timezone.now()
+            config.terraform_managed_by = membership
+        config.terraform_last_applied_at = timezone.now()
     config.is_managed_by_terraform = enabled
-    config.save(update_fields=["managed_by", "managed_at", "is_managed_by_terraform"])
+    config.save(update_fields=["terraform_managed_by", "terraform_last_applied_at", "is_managed_by_terraform"])
     return get_terraform_lock(team_id=team_id)
 
 

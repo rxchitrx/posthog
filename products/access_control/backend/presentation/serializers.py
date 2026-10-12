@@ -306,8 +306,8 @@ class AccessControlManagementSerializer(serializers.Serializer):
         help_text="Whether Terraform manages this project's access rules. While true, only the account behind "
         "Terraform's API key may change them."
     )
-    managed_at = serializers.DateTimeField(
-        allow_null=True, help_text="When Terraform's account started managing the project, or null."
+    terraform_last_applied_at = serializers.DateTimeField(
+        allow_null=True, help_text="When Terraform last wrote an access rule in this project, or null."
     )
     has_terraform_account = serializers.BooleanField(
         help_text="Whether Terraform wrote access rules to this project at least once. Until then, an enabled lock "
