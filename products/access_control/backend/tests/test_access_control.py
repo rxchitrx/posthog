@@ -3022,7 +3022,10 @@ class TestAccessControlManagedByTerraform(BaseAccessControlTest):
             user=self.terraform_user, organization=self.organization
         )
         TeamAccessControlConfig.objects.create(
-            team=self.team, managed_by=self.terraform_membership, is_managed_by_terraform=True, managed_at=now()
+            team=self.team,
+            terraform_managed_by=self.terraform_membership,
+            is_managed_by_terraform=True,
+            terraform_last_applied_at=now(),
         )
 
     def _put_default_rule(self):
@@ -3065,7 +3068,7 @@ class TestAccessControlManagedByTerraform(BaseAccessControlTest):
         assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
 
     def test_a_lock_with_no_account_refuses_everyone(self):
-        TeamAccessControlConfig.objects.filter(team=self.team).update(managed_by=None)
+        TeamAccessControlConfig.objects.filter(team=self.team).update(terraform_managed_by=None)
         assert self._put_global_access_control({"resource": "feature_flag"}).status_code == status.HTTP_403_FORBIDDEN
 
     def test_turning_the_lock_off_hands_the_rules_back(self):
