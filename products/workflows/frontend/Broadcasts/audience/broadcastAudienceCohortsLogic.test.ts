@@ -1,3 +1,5 @@
+import { expectLogic } from 'kea-test-utils'
+
 import { ApiError } from 'lib/api-error'
 
 import { useMocks } from '~/mocks/jest'
@@ -67,5 +69,35 @@ describe('broadcastAudienceCohortsLogic', () => {
         } finally {
             jest.useRealTimers()
         }
+    })
+
+    it("offers the uploaded list's columns to the email editor", async () => {
+        let requestedCohorts: string | null = null
+        useMocks({
+            get: {
+                '/api/projects/:team_id/workflow_recipient_lists/': ({ request }) => {
+                    requestedCohorts = new URL(request.url).searchParams.get('cohort_ids')
+                    return [200, [{ id: 'list-1', cohort_id: 42, columns: ['email', 'plan'] }]]
+                },
+            },
+        })
+        jest.mocked(cohortsRetrieve).mockResolvedValue(cohort(false))
+        const wizard = broadcastWizardLogic({ id: 'new' })
+        wizard.mount()
+        wizard.actions.setAudienceProperties([
+            { type: PropertyFilterType.Cohort, key: 'id', value: 42, operator: PropertyOperator.In },
+        ])
+        const logic = broadcastAudienceCohortsLogic({ id: 'new' })
+        logic.mount()
+
+        await expectLogic(logic)
+            .toDispatchActions(['setListColumns'])
+            .toMatchValues({
+                listVariables: [
+                    { key: 'email', type: 'string' },
+                    { key: 'plan', type: 'string' },
+                ],
+            })
+        expect(requestedCohorts).toEqual('42')
     })
 })

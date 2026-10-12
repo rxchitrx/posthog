@@ -47,11 +47,11 @@ export function BroadcastAudienceListModal(): JSX.Element {
             <div className="flex flex-col gap-4" data-attr="broadcast-audience-list-modal">
                 {importsPeople ? (
                     <span className="text-sm text-secondary">
-                        Each row creates or updates a person. The file needs an <code>email</code> column. Every other
-                        column is saved on the person, so you can use it in the email, for example{' '}
-                        <code>{'{{ person.properties.plan }}'}</code> for a <code>plan</code> column. Property names
-                        match the column names exactly, including capital letters. Add a <code>distinct_id</code> column
-                        to update people by their ID in your app.
+                        Each row is one recipient. The file needs an <code>email</code> column. Every other column can
+                        go in the email as a variable, for example <code>{'{{ variables.plan }}'}</code> for a{' '}
+                        <code>plan</code> column. Variable names match the column names exactly, including capital
+                        letters. To match people by their ID in your app, add a <code>distinct_id</code> column, or an{' '}
+                        <code>id</code> column like a Customer.io export has. A broadcast can send to one uploaded list.
                     </span>
                 ) : (
                     <span className="text-sm text-secondary">{COHORT_CSV_HELP}</span>
@@ -67,10 +67,12 @@ export function BroadcastAudienceListModal(): JSX.Element {
                 />
                 <div className="text-xs text-secondary">
                     {importsPeople
-                        ? "People who aren't in PostHog yet are created. A column with the same name as an existing property replaces its value."
+                        ? "People who aren't in PostHog yet are created with their email. The other columns stay with this list and aren't saved on the person."
                         : "Only people who are already in PostHog are included. Anyone else on the list won't receive the email."}
                     {audienceProperties.length > 0
-                        ? ' People must be on every list and match your other conditions to get the email.'
+                        ? importsPeople
+                            ? ' People must also match your other conditions to get the email.'
+                            : ' People must be on every list and match your other conditions to get the email.'
                         : null}
                 </div>
                 {createError ? <LemonBanner type="error">{createError}</LemonBanner> : null}

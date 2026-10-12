@@ -7,6 +7,7 @@ import { AnyPropertyFilter, PropertyFilterType } from '~/types'
 
 import { cohortsRetrieve } from 'products/cohorts/frontend/generated/api'
 
+import { workflowRecipientListsList } from '../../generated/api'
 import { BroadcastWizardLogicProps, broadcastWizardLogic } from '../broadcastWizardLogic'
 import { audienceCohortIds, audienceCohortLaunchError, toAudienceCohort } from './audienceList'
 
@@ -30,6 +31,8 @@ export interface broadcastAudienceCohortsLogicValues {
     currentProjectId: number | null // projectLogic
     audienceCohorts: Record<number, AudienceCohort | null>
     cohortIds: number[]
+    listColumns: string[]
+    listVariables: { key: string; type: string }[]
     nonCohortAudience: AnyPropertyFilter[]
 }
 
@@ -42,8 +45,14 @@ export interface broadcastAudienceCohortsLogicActions {
     loadAudienceCohorts: () => {
         value: true
     }
+    loadListColumns: () => {
+        value: true
+    }
     setAudienceCohorts: (cohorts: Record<number, AudienceCohort | null>) => {
         cohorts: Record<number, AudienceCohort | null>
+    }
+    setListColumns: (columns: string[]) => {
+        columns: string[]
     }
 }
 
@@ -53,6 +62,7 @@ export interface broadcastAudienceCohortsLogicMeta {
     __keaTypeGenInternalSelectorTypes: {
         nonCohortAudience: (audienceProperties: AnyPropertyFilter[]) => AnyPropertyFilter[]
         cohortIds: (audienceProperties: AnyPropertyFilter[]) => number[]
+        listVariables: (listColumns: string[]) => { key: string; type: string }[]
     }
 }
 
@@ -74,12 +84,20 @@ export const broadcastAudienceCohortsLogic = kea<broadcastAudienceCohortsLogicTy
     actions({
         loadAudienceCohorts: true,
         setAudienceCohorts: (cohorts: Record<number, AudienceCohort | null>) => ({ cohorts }),
+        loadListColumns: true,
+        setListColumns: (columns: string[]) => ({ columns }),
     }),
     reducers({
         audienceCohorts: [
             {} as Record<number, AudienceCohort | null>,
             {
                 setAudienceCohorts: (_, { cohorts }) => cohorts,
+            },
+        ],
+        listColumns: [
+            [] as string[],
+            {
+                setListColumns: (_, { columns }) => columns,
             },
         ],
     }),
@@ -94,8 +112,34 @@ export const broadcastAudienceCohortsLogic = kea<broadcastAudienceCohortsLogicTy
             (s) => [s.audienceProperties],
             (audienceProperties: AnyPropertyFilter[]): number[] => audienceCohortIds(audienceProperties),
         ],
+        // The uploaded list's columns, which the email editor offers as {{ variables.<column> }}.
+        listVariables: [
+            (s) => [s.listColumns],
+            (listColumns: string[]): { key: string; type: string }[] =>
+                listColumns.map((key) => ({ key, type: 'string' })),
+        ],
     }),
     listeners(({ actions, values }) => ({
+        loadListColumns: async (_, breakpoint) => {
+            await breakpoint(100)
+            const ids = values.cohortIds
+            if (!values.currentProjectId || ids.length === 0) {
+                actions.setListColumns([])
+                return
+            }
+            let columns: string[] = []
+            try {
+                const lists = await workflowRecipientListsList(String(values.currentProjectId), {
+                    cohort_ids: ids.join(','),
+                })
+                // A broadcast sends to one uploaded list, so its columns are the email's variables.
+                columns = lists[0]?.columns ?? []
+            } catch {
+                // The editor still works without the columns. It only loses their suggestions.
+            }
+            breakpoint()
+            actions.setListColumns(columns)
+        },
         loadAudienceCohorts: async (_, breakpoint) => {
             await breakpoint(100)
             const ids = values.cohortIds
@@ -137,10 +181,12 @@ export const broadcastAudienceCohortsLogic = kea<broadcastAudienceCohortsLogicTy
         cohortIds: (next: number[], previous?: number[]) => {
             if (previous !== undefined && next.join() !== previous.join()) {
                 actions.loadAudienceCohorts()
+                actions.loadListColumns()
             }
         },
     })),
     afterMount(({ actions }) => {
         actions.loadAudienceCohorts()
+        actions.loadListColumns()
     }),
 ])

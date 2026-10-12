@@ -1,4 +1,4 @@
-import { useActions, useValues } from 'kea'
+import { useActions, useMountedLogic, useValues } from 'kea'
 import { useState } from 'react'
 
 import { LemonBanner, LemonButton, LemonSwitch } from '@posthog/lemon-ui'
@@ -12,6 +12,7 @@ import { IntegrationType } from '~/types'
 import { EmailSetupModal } from '../../Channels/EmailSetup/EmailSetupModal'
 import { buildSampleGlobals } from '../../Workflows/hogflows/steps/components/HogFlowFunctionConfiguration'
 import { UtmTagFields } from '../../Workflows/hogflows/steps/components/UtmTagFields'
+import { broadcastAudienceCohortsLogic } from '../audience/broadcastAudienceCohortsLogic'
 import {
     BroadcastEmailValue,
     DEFAULT_BROADCAST_EMAIL,
@@ -24,6 +25,8 @@ export function BroadcastContentStep(): JSX.Element {
     const { broadcast, email, name, stepValidationErrors, selectedSender, emailSettings } =
         useValues(broadcastWizardLogic)
     const { setEmail, setEmailSettings } = useActions(broadcastWizardLogic)
+    const { props } = useMountedLogic(broadcastWizardLogic)
+    const { listVariables } = useValues(broadcastAudienceCohortsLogic(props))
     const { integrations, integrationsLoading } = useValues(integrationsLogic)
     const { loadIntegrations } = useActions(integrationsLogic)
     const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
@@ -126,7 +129,7 @@ export function BroadcastContentStep(): JSX.Element {
                 value={editorValue as unknown as EmailTemplate}
                 defaultValue={DEFAULT_BROADCAST_EMAIL as unknown as EmailTemplate}
                 onChange={(value) => setEmail(value as unknown as BroadcastEmailValue)}
-                variables={buildSampleGlobals({ type: 'batch' }, null)}
+                variables={buildSampleGlobals({ type: 'batch' }, listVariables)}
                 fieldErrors={fieldErrors}
             />
             {email.to?.email && !email.to.email.includes('{{') ? (

@@ -26,6 +26,8 @@ export interface BroadcastPerformanceStats {
     trackedSends: number
     /** Recipients who met the broadcast's goal. */
     converted: number
+    /** Audience members the uploaded list had no row for, so they got no email. */
+    notInList: number
 }
 
 const TOTALS_METRICS = [
@@ -38,6 +40,7 @@ const TOTALS_METRICS = [
     'email_failed',
     'email_untracked',
     'conversion',
+    'not_in_list',
 ]
 
 /** Hourly buckets read well for a few days after a send, then the tail of late opens needs daily ones. */
@@ -211,6 +214,7 @@ export const broadcastPerformanceLogic = kea<broadcastPerformanceLogicType>([
                     failed: totals.email_failed ?? 0,
                     trackedSends: Math.max(sent - (totals.email_untracked ?? 0), 0),
                     converted: totals.conversion ?? 0,
+                    notInList: totals.not_in_list ?? 0,
                 }
             },
         ],

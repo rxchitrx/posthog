@@ -1,4 +1,4 @@
-import { audienceCohortLaunchError, csvListError, peopleImportMessage } from './audienceList'
+import { audienceCohortLaunchError, csvListError, recipientListMessage } from './audienceList'
 
 describe('audienceList', () => {
     it.each([
@@ -47,25 +47,28 @@ describe('audienceList', () => {
         {
             case: 'nothing skipped',
             dropped: [0, 0, 0],
+            columns: ['email'],
             expected:
-                'Added "List" to the audience. 2 new people were created. Their properties can take a minute to update.',
+                'Added "List" to the audience. Created 2 people who weren\'t in PostHog yet. Matching the people can take a minute.',
         },
         {
             case: 'skipped rows',
             dropped: [1, 2, 0],
+            columns: ['email', 'plan', 'Address, line 1'],
             expected:
-                'Added "List" to the audience. 2 new people were created. Skipped 3 rows: 1 had no valid email, 2 repeated an email or distinct ID. Their properties can take a minute to update.',
+                'Added "List" to the audience. Created 2 people who weren\'t in PostHog yet. Skipped 3 rows: 1 had no valid email, 2 repeated an email or distinct ID. The email can use {{ variables.plan }}, {{ variables["Address, line 1"] }}. Matching the people can take a minute.',
         },
-    ])('reports an import with $case', ({ dropped: [invalid, duplicate, tooLarge], expected }) => {
+    ])('reports an upload with $case', ({ dropped: [invalid, duplicate, tooLarge], columns, expected }) => {
         const summary = {
+            id: 'list-1',
             cohort_id: 42,
             row_count: 2,
             new_people: 2,
-            columns: ['email'],
+            columns,
             dropped_invalid_email: invalid,
             dropped_duplicate_email: duplicate,
             dropped_too_large: tooLarge,
         }
-        expect(peopleImportMessage('List', summary)).toEqual(expected)
+        expect(recipientListMessage('List', summary)).toEqual(expected)
     })
 })

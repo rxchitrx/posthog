@@ -61,6 +61,13 @@ export function BroadcastPerformance({
                     </div>
                 ))}
             </div>
+            {stats.notInList > 0 ? (
+                <span className="text-xs text-muted">
+                    {humanFriendlyNumber(stats.notInList)}{' '}
+                    {stats.notInList === 1 ? "person in the audience wasn't" : "people in the audience weren't"} in the
+                    uploaded list, so they didn't get the email.
+                </span>
+            ) : null}
 
             <div className="flex flex-col gap-3">
                 {engagement.map(({ label, part, whole }) => (

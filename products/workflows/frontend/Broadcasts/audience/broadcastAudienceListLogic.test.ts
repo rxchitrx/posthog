@@ -105,6 +105,7 @@ describe('broadcastAudienceListLogic', () => {
     const IMPORTED = [
         201,
         {
+            id: 'list-1',
             cohort_id: 42,
             row_count: 1,
             new_people: 1,
@@ -182,7 +183,7 @@ describe('broadcastAudienceListLogic', () => {
             response: [400, { detail: 'Add a column named "email" with each person\'s address.' }],
             expected: {
                 isListModalOpen: true,
-                createError: 'Couldn\'t import the people: Add a column named "email" with each person\'s address.',
+                createError: 'Couldn\'t upload the list: Add a column named "email" with each person\'s address.',
             },
             audience: [],
             importedRows: [{ name: 'Ada' }],
@@ -200,13 +201,13 @@ describe('broadcastAudienceListLogic', () => {
             importedRows: undefined,
         },
     ])(
-        'with the people import flag on, an upload $outcome',
+        'with the recipient lists flag on, an upload $outcome',
         async ({ csv, response, cohortReadFails, expected, audience, importedRows }) => {
             let sentRows: unknown
             useMocks({
                 ...(cohortReadFails ? { get: { '/api/projects/:team/cohorts/:id/': () => [500, {}] } } : {}),
                 post: {
-                    '/api/projects/:team_id/workflow_people_imports/': async ({ request }) => {
+                    '/api/projects/:team_id/workflow_recipient_lists/': async ({ request }) => {
                         sentRows = ((await request.json()) as { rows: unknown }).rows
                         return response as [number, object]
                     },

@@ -2,7 +2,7 @@ import { AnyPropertyFilter, PropertyFilterType } from '~/types'
 
 import type { CohortApi } from 'products/cohorts/frontend/generated/api.schemas'
 
-import type { PeopleImportApi } from '../../generated/api.schemas'
+import type { RecipientListApi } from '../../generated/api.schemas'
 import type { AudienceCohort } from './broadcastAudienceCohortsLogic'
 
 const SUPPORTED_ID_HEADERS = ['email', 'e-mail', 'distinct_id', 'distinct-id', 'person_id', 'person-id', 'person .id']
@@ -116,11 +116,20 @@ export function audienceCohortLaunchError(cohort: AudienceCohort): string | null
     return null
 }
 
-/** What an upload added, and which rows it skipped and why, so a short list is never a surprise. */
-export function peopleImportMessage(cohortName: string, summary: PeopleImportApi): string {
+const LIQUID_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
+
+/** How an email template reads a list column. Liquid needs the bracket form for a name with spaces or symbols. */
+export function listColumnVariable(column: string): string {
+    return LIQUID_IDENTIFIER.test(column) ? `{{ variables.${column} }}` : `{{ variables[${JSON.stringify(column)}] }}`
+}
+
+/** What an upload added, which rows it skipped and why, and the variables the email can use. */
+export function recipientListMessage(cohortName: string, summary: RecipientListApi): string {
     const parts = [`Added "${cohortName}" to the audience.`]
     if (summary.new_people) {
-        parts.push(`${summary.new_people} new ${summary.new_people === 1 ? 'person was' : 'people were'} created.`)
+        parts.push(
+            `Created ${summary.new_people} ${summary.new_people === 1 ? 'person' : 'people'} who weren't in PostHog yet.`
+        )
     }
     const skipped: [number, string][] = [
         [summary.dropped_invalid_email, 'had no valid email'],
@@ -132,6 +141,11 @@ export function peopleImportMessage(cohortName: string, summary: PeopleImportApi
     if (skippedRows) {
         parts.push(`Skipped ${skippedRows} ${skippedRows === 1 ? 'row' : 'rows'}: ${reasons.join(', ')}.`)
     }
-    parts.push('Their properties can take a minute to update.')
+    const columns = summary.columns.filter((column) => column !== 'email')
+    if (columns.length) {
+        const shown = columns.slice(0, 3).map(listColumnVariable).join(', ')
+        parts.push(`The email can use ${shown}${columns.length > 3 ? ` and ${columns.length - 3} more` : ''}.`)
+    }
+    parts.push('Matching the people can take a minute.')
     return parts.join(' ')
 }
