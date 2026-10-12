@@ -3071,6 +3071,12 @@ class TestAccessControlManagedByTerraform(BaseAccessControlTest):
         TeamAccessControlConfig.objects.filter(team=self.team).update(terraform_managed_by=None)
         assert self._put_global_access_control({"resource": "feature_flag"}).status_code == status.HTTP_403_FORBIDDEN
 
+    def test_removing_the_terraform_account_disables_the_lock(self):
+        self.terraform_membership.delete()
+        config = TeamAccessControlConfig.objects.get(team=self.team)
+        assert config.terraform_managed_by is None and config.is_managed_by_terraform is False
+        assert self._put_global_access_control({"resource": "feature_flag"}).status_code == status.HTTP_200_OK
+
     def test_turning_the_lock_off_hands_the_rules_back(self):
         TeamAccessControlConfig.objects.filter(team=self.team).update(is_managed_by_terraform=False)
         assert self._put_global_access_control({"resource": "feature_flag"}).status_code == status.HTTP_200_OK
